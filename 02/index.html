@@ -4,16 +4,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>02 — Esfera</title>
+  <title>02 — Vertigo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wdth,wght@6..144,25..151,1..1000&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="/src/scenes/02/style.css" />
 </head>
 
 <body>
-  <header class="hud">
+  <!-- <header class="hud">
     <a href="/">Índice</a>
-    <span>02 · Esfera</span>
-  </header>
-  <canvas id="canvas"></canvas>
+    <span>02 · Vertigo</span>
+  </header> -->
+  <div class="title-wrap">
+    <h1 id="title">VERTIGO</h1>
+  </div>
+  <canvas class="threejs"></canvas>
+  <div class="credits">
+    <p class="director">Alfred Hitchcock</p>
+    <div class="cast">
+      <p>James<br />Stewart</p>
+      <p>Kim<br />Novak</p>
+    </div>
+  </div>
   <script type="module" src="/src/scenes/02/main.js"></script>
 </body>
 

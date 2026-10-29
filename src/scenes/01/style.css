@@ -1,0 +1,46 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #14110f;
+  color: #f6efe6;
+  font-family: system-ui, sans-serif;
+}
+
+canvas {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.hud {
+  position: fixed;
+  top: 1.25rem;
+  left: 1.25rem;
+  z-index: 2;
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  color: #fff;
+  mix-blend-mode: difference;
+}
+
+.hud a {
+  color: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.hud a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}

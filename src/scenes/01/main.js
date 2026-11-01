@@ -16,14 +16,34 @@ import {
   uniform,
 } from "three/tsl";
 import { fxaa } from "three/addons/tsl/display/FXAANode.js";
+import risoColors from "riso-colors";
+
+function riso(name) {
+  const swatch = risoColors.find((ink) => ink.name === name);
+  if (!swatch) throw new Error(`Riso color not found: ${name}`);
+  return swatch.hex;
+}
+
+const risoInkMap = Object.fromEntries(
+  risoColors.map((ink) => [ink.name, ink.hex]),
+);
+
+function risoHex(value) {
+  if (typeof value === "string" && !value.startsWith("#")) return riso(value);
+  return value;
+}
 
 const palette = {
-  light: "#F2EBF2",
-  ambient: "##ACB0F2",
-  blue1: "#056CF2",
-  blue2: "#0583F2",
-  orange1: "#F28705",
+  blue: riso("Blue"),
+  red: riso("Cranberry"),
+  black: riso("Midnight"),
+  burgundy: riso("Burgundy"),
 };
+
+const getRandomRisoColor = () =>
+  risoColors[Math.floor(Math.random() * risoColors.length)];
+
+const randomRange = (min, max) => Math.random() * (max - min) + min;
 
 class Scene01 {
   constructor() {
@@ -34,8 +54,9 @@ class Scene01 {
     this.setupCamera();
     this.setupRenderer();
     this.setupLights();
-    this.setupFloor();
-    this.setupPrismGrid();
+    // this.setupFloor();
+    // this.setupPrismGrid();
+    this.setupPrismalPiramid();
     this.setupPostProcessing();
     this.renderer.inspector.profiler.show(this.renderer.inspector.parameters);
 
@@ -60,7 +81,7 @@ class Scene01 {
 
   setupCamera() {
     this.camera = new THREE.PerspectiveCamera(35, this.aspect, 0.1, 100);
-    this.camera.position.set(8, 7, 10);
+    this.camera.position.set(18, -8, -12);
     this.scene.add(this.camera);
 
     this.controls = new OrbitControls(this.camera, this.canvas);
@@ -74,18 +95,38 @@ class Scene01 {
       antialias: false,
     });
 
-    this.renderer.toneMapping = THREE.NoToneMapping;
+    this.toneMappingObject = {
+      NoToneMapping: THREE.NoToneMapping,
+      LinearToneMapping: THREE.LinearToneMapping,
+      ReinhardToneMapping: THREE.ReinhardToneMapping,
+      CineonToneMapping: THREE.CineonToneMapping,
+      ACESFilmicToneMapping: THREE.ACESFilmicToneMapping,
+      AgXToneMapping: THREE.AgXToneMapping,
+      NeutralToneMapping: THREE.NeutralToneMapping,
+      CustomToneMapping: THREE.CustomToneMapping,
+    };
+
+    this.renderer.toneMapping = THREE.NeutralToneMapping; // * Todo usar NeutralToneMapping despues;
     this.renderer.toneMappingExposure = 1;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.BasicShadowMap;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.inspector = new Inspector();
+
+    const toneMapping =
+      this.renderer.inspector.createParameters("Tone Mapping");
+    toneMapping
+      .add(this.renderer, "toneMapping", this.toneMappingObject)
+      .name("toneMapping");
+    toneMapping
+      .add(this.renderer, "toneMappingExposure", 0, 4, 0.01)
+      .name("exposure");
   }
 
   setupLights() {
     this.directional = new THREE.DirectionalLight(0xffffff, 1);
     this.directional.castShadow = true;
-    this.directional.position.set(6, 3.5, -4);
+    this.directional.position.set(10, -5, 6);
     this.directional.shadow.mapSize.set(2048 * 2, 2048 * 2);
     this.directional.shadow.camera.near = 0.5;
     this.directional.shadow.camera.far = 40;
@@ -105,7 +146,7 @@ class Scene01 {
 
     const folder = this.renderer.inspector.createParameters("Light");
     folder.add(this.directional.position, "x", -20, 20, 0.1).name("positionX");
-    folder.add(this.directional.position, "y", 0.1, 20, 0.1).name("positionY");
+    folder.add(this.directional.position, "y", -10, 20, 0.1).name("positionY");
     folder.add(this.directional.position, "z", -20, 20, 0.1).name("positionZ");
   }
 
@@ -116,8 +157,12 @@ class Scene01 {
     threshold = 0,
     receiveCast = false,
   }) {
-    const litColor = uniform(color(lit));
-    const shadeColor = uniform(color(shade));
+    const inks = {
+      lit: risoHex(lit),
+      shade: risoHex(shade),
+    };
+    const litColor = uniform(color(inks.lit));
+    const shadeColor = uniform(color(inks.shade));
     const cutoff = uniform(threshold);
 
     const facingLight = step(cutoff, normalWorld.dot(this.lightDirectionNode));
@@ -133,21 +178,27 @@ class Scene01 {
     });
 
     const folder = this.renderer.inspector.createParameters(name);
-    folder.addColor(litColor, "value").name("lit");
-    folder.addColor(shadeColor, "value").name("shadow");
+    folder
+      .add(inks, "lit", risoInkMap)
+      .name("lit")
+      .onChange((hex) => litColor.value.set(hex));
+    folder
+      .add(inks, "shade", risoInkMap)
+      .name("shadow")
+      .onChange((hex) => shadeColor.value.set(hex));
     folder.add(cutoff, "value", -1, 1, 0.01).name("threshold");
 
     return material;
   }
 
   setupFloor() {
-    this.backgroundColor = new THREE.Color("#2ea8ff");
+    this.backgroundColor = new THREE.Color(palette.black);
     this.scene.background = this.backgroundColor;
 
     const material = this.createPosterMaterial({
       name: "Floor",
-      lit: "#2ea8ff",
-      shade: "#111111",
+      lit: palette.burgundy,
+      shade: palette.black,
       receiveCast: true,
     });
 
@@ -165,17 +216,150 @@ class Scene01 {
       });
   }
 
+  setupPrismalPiramid() {
+    this.pyramidParams = {
+      steps: 8,
+      stepThickness: 0.7,
+      stepSpacing: 1.1,
+      stepScale: 2,
+      tipSize: 1,
+      tipOffset: -1.2,
+      groupY: -5,
+      groupScale: 0.5,
+      sphereCount: 3,
+      sphereY: 15,
+      sphereBaseScale: 5,
+      sphereSpread: 8,
+    };
+
+    this.prismalPiramid = new THREE.Group();
+    this.scene.add(this.prismalPiramid);
+
+    this.pyramidMaterial = this.createPosterMaterial({
+      name: "Prismal Piramid",
+      lit: getRandomRisoColor().hex,
+      shade: getRandomRisoColor().hex,
+    });
+    this.sphereMaterial = this.createPosterMaterial({
+      name: "Top Sphere",
+      lit: getRandomRisoColor().hex,
+      shade: getRandomRisoColor().hex,
+      receiveCast: true,
+    });
+
+    this.rebuildPyramid();
+    this.setupPyramidInspector();
+  }
+
+  clearPyramid() {
+    const disposed = new Set();
+
+    while (this.prismalPiramid.children.length > 0) {
+      const child = this.prismalPiramid.children[0];
+      this.prismalPiramid.remove(child);
+
+      if (child.geometry && !disposed.has(child.geometry)) {
+        disposed.add(child.geometry);
+        child.geometry.dispose();
+      }
+    }
+  }
+
+  rebuildPyramid() {
+    const {
+      steps,
+      stepThickness,
+      stepSpacing,
+      stepScale,
+      tipSize,
+      tipOffset,
+      groupY,
+      groupScale,
+      sphereCount,
+      sphereY,
+      sphereBaseScale,
+      sphereSpread,
+    } = this.pyramidParams;
+
+    this.clearPyramid();
+    this.prismalPiramid.position.set(0, groupY, 0);
+    this.prismalPiramid.scale.setScalar(groupScale);
+
+    const slabGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+    for (let index = 0; index < steps; index++) {
+      const mesh = new THREE.Mesh(slabGeometry, this.pyramidMaterial);
+      const size = (index + 1) * stepScale;
+      mesh.position.set(0, index * stepSpacing, 0);
+      mesh.scale.set(size, stepThickness, size);
+      this.prismalPiramid.add(mesh);
+    }
+
+    const tipGeometry = new THREE.ConeGeometry(1, 1, 4, 1, true).toNonIndexed();
+    tipGeometry.computeVertexNormals();
+
+    const tip = new THREE.Mesh(tipGeometry, this.pyramidMaterial);
+    tip.position.set(0, tipOffset, 0);
+    tip.scale.setScalar(tipSize);
+    tip.rotation.set(Math.PI, Math.PI * 0.25, 0);
+    this.prismalPiramid.add(tip);
+
+    const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
+
+    for (let index = 0; index < sphereCount; index++) {
+      const sphere = new THREE.Mesh(sphereGeometry, this.sphereMaterial);
+      const angle = index * 2.1;
+      const radius = index === 0 ? 0 : sphereSpread * (0.35 + index * 0.2);
+      const scale = sphereBaseScale * Math.pow(0.32, index);
+
+      sphere.position.set(
+        Math.cos(angle) * radius,
+        sphereY,
+        Math.sin(angle) * radius,
+      );
+      sphere.scale.setScalar(scale);
+      this.prismalPiramid.add(sphere);
+    }
+  }
+
+  setupPyramidInspector() {
+    const folder = this.renderer.inspector.createParameters("Pyramid");
+    const rebuild = () => this.rebuildPyramid();
+
+    folder.add(this.pyramidParams, "steps", 1, 24, 1).onChange(rebuild);
+    folder
+      .add(this.pyramidParams, "stepThickness", 0.05, 2, 0.01)
+      .onChange(rebuild);
+    folder
+      .add(this.pyramidParams, "stepSpacing", 0.2, 3, 0.01)
+      .onChange(rebuild);
+    folder.add(this.pyramidParams, "stepScale", 0.2, 6, 0.01).onChange(rebuild);
+    folder.add(this.pyramidParams, "tipSize", 0.1, 4, 0.01).onChange(rebuild);
+    folder.add(this.pyramidParams, "tipOffset", -2, 2, 0.01).onChange(rebuild);
+    folder.add(this.pyramidParams, "groupY", -20, 10, 0.1).onChange(rebuild);
+    folder
+      .add(this.pyramidParams, "groupScale", 0.1, 2, 0.01)
+      .onChange(rebuild);
+    folder.add(this.pyramidParams, "sphereCount", 0, 8, 1).onChange(rebuild);
+    folder.add(this.pyramidParams, "sphereY", 0, 30, 0.1).onChange(rebuild);
+    folder
+      .add(this.pyramidParams, "sphereBaseScale", 0.2, 12, 0.01)
+      .onChange(rebuild);
+    folder
+      .add(this.pyramidParams, "sphereSpread", 0, 20, 0.1)
+      .onChange(rebuild);
+  }
+
   setupPrismGrid() {
     const columns = 5;
     const rows = 5;
     const spacing = 2;
-    const height = 1.5;
     const size = 0.8;
-    const geometry = new THREE.BoxGeometry(size, height, size);
+    const geometry = new THREE.BoxGeometry(size, 1, size);
     const material = this.createPosterMaterial({
       name: "Prisms",
-      lit: "#ff1110",
-      shade: "#1a1028",
+      lit: palette.red,
+      shade: palette.burgundy,
     });
 
     const group = new THREE.Group();
@@ -184,7 +368,9 @@ class Scene01 {
 
     for (let column = 0; column < columns; column++) {
       for (let row = 0; row < rows; row++) {
+        const height = randomRange(5, 7);
         const mesh = new THREE.Mesh(geometry, material);
+        mesh.scale.y = height;
         mesh.position.set(
           column * spacing - offsetX,
           height * 0.5,

@@ -55,21 +55,21 @@ canvas.threejs {
   z-index: 0;
   width: 100%;
   height: min(50vw, 48vh);
-  padding: 0.35rem 1.5rem 0;
+  padding: 1rem 1rem 0;
   overflow: visible;
   pointer-events: none;
 }
 
 .credits {
   position: fixed;
-  top: min(50vw, 48vh);
+  top: min(100vw, 80vh);
   left: 0;
   right: 0;
   z-index: 2;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  padding: 0.35rem 1.5rem 0;
+  align-items: flex-end;
+  padding: 0.25rem 2rem 0;
   color: #f4f0ea;
   font-family: "Google Sans Flex", sans-serif;
   font-optical-sizing: auto;
@@ -78,69 +78,64 @@ canvas.threejs {
 }
 
 .director {
-  margin: 0 0 0.85rem;
-  margin-bottom: 5rem;
-  font-size: clamp(0.8rem, 1vw, 1.1rem);
+  margin: 0 0 2rem;
+  font-size: clamp(0.8rem, 4vw, 1.2rem);
   font-weight: 350;
   letter-spacing: 0.08em;
 }
 
+.cast {
+  display: flex;
+  gap: 2.2rem;
+}
 
 .cast p {
-  margin: 0 0 0.65rem;
-  margin-bottom: 1rem;
-  font-size: clamp(1.5rem, 4vw, 5rem);
+  margin: 0 0 1rem;
+  font-size: clamp(1.35rem, 7vw, 2.2rem);
   font-weight: 450;
   line-height: 1.02;
 }
 
-@media (max-width: 767px) {
+@media (min-width: 720px) {
   .title-wrap {
-    padding: 1rem 1rem 0;
+    padding: 0.35rem 1.5rem 0;
   }
 
   .credits {
-    top: min(80vw, 48vh);
-    align-items: flex-end;
-    padding: 0.25rem 1rem 0;
-    /* text-align: left; */
+    top: unset;
+    bottom: 1.25rem;
+    padding: 0.35rem 2.5rem 0;
+    align-items: flex-start;
+    text-align: left;
   }
 
   .director {
-    margin-bottom: 3rem;
-  }
-
-  .cast p {
-    font-size: clamp(1.35rem, 7vw, 2rem);
-  }
-}
-
-@media (max-width: 720px) {
-  .title-wrap {
-    padding: 1rem 1rem 0;
-  }
-
-  .credits {
-    top: min(100vw, 80vh);
-    align-items: flex-end;
-    padding: 0.25rem 2rem 0;
-    /* text-align: left; */
-
-  }
-
-  .director {
-    margin-bottom: 2rem;
-    font-size: clamp(0.8rem, 4vw, 1.2rem);
+    margin-bottom: 1.5rem;
+    font-size: clamp(0.8rem, 1.5vw, 1.1rem);
   }
 
   .cast {
     display: flex;
-
-    gap: 2.2rem
+    gap: 2rem;
   }
 
   .cast p {
-    font-size: clamp(1.35rem, 7vw, 2.2rem);
+    font-size: clamp(1.5rem, 5vw, 3.5rem);
+  }
+}
+
+@media (min-width: 1200px) {
+  .credits {
+    align-items: flex-start;
+  }
+
+  .director {
+    margin-bottom: 2rem;
+    font-size: clamp(0.8rem, 1vw, 1.1rem);
+  }
+
+  .cast p {
+    font-size: clamp(1.5rem, 4vw, 5rem);
   }
 }
 

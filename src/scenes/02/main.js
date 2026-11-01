@@ -1,6 +1,8 @@
 import * as THREE from "three/webgpu";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Inspector } from "three/addons/inspector/Inspector.js";
+import { Pointer } from "./Pointer.js";
+import { VariableTitle } from "./VariableTitle.js";
 import {
   atan,
   color,
@@ -33,173 +35,75 @@ function map(value, inMin, inMax, outMin, outMax) {
   return outMin + t * (outMax - outMin);
 }
 
-class Pointer {
-  constructor(cof = 0.08) {
-    this.cof = cof;
-    this.raw = {
-      x: window.innerWidth * 0.5,
-      y: window.innerHeight * 0.5,
-    };
-    this.smoothed = { ...this.raw };
-    this.normalized = { x: 0, y: 0 };
+const LAYOUT = {
+  tablet: 720,
+  desktop: 1200,
+};
 
-    window.addEventListener("pointermove", (event) => {
-      this.raw.x = event.clientX;
-      this.raw.y = event.clientY;
-    });
+const CAMERA_POSES = {
+  mobile: {
+    position: [10.85, -32.76, 23.83],
+    target: [1.07, 10.05, -6.13],
+  },
+  tablet: {
+    position: [-10.22, -36.2, 24.68],
+    target: [1.33, 6.03, -3.71],
+  },
+  desktop: {
+    position: [-2.54, -33.94, 22.39],
+    target: [3.16, 8.35, -2.29],
+  },
+};
 
-    const loop = () => {
-      this.update();
-      requestAnimationFrame(loop);
-    };
-    loop();
-  }
+const CURSOR_PRESETS = {
+  mobile: {
+    lineWidthMin: 0.9,
+    lineWidthMax: 0.5,
+    letterScaleMin: 1.2,
+    letterScaleMax: 2.1,
+    letterRadius: 1.4,
+    cameraNudgeX: 1,
+    cameraNudgeY: 0.7,
+    lookNudgeX: 1.4,
+    lookNudgeY: 1,
+    vortexRotateZ: 0.3,
+    offsetRotateZ: 0.3,
+  },
+  tablet: {
+    lineWidthMin: 0.9,
+    lineWidthMax: 0.5,
+    letterScaleMin: 0.75,
+    letterScaleMax: 1.9,
+    letterRadius: 1.4,
+    cameraNudgeX: 1.4,
+    cameraNudgeY: 1,
+    lookNudgeX: 1.9,
+    lookNudgeY: 3,
+    vortexRotateZ: 0.3,
+    offsetRotateZ: -0.25,
+  },
+  desktop: {
+    lineWidthMin: 0.9,
+    lineWidthMax: 0.5,
+    letterScaleMin: 0.2,
+    letterScaleMax: 2.0,
+    letterRadius: 1.9,
+    cameraNudgeX: 1.8,
+    cameraNudgeY: 0.2,
+    lookNudgeX: 2.4,
+    lookNudgeY: 1.6,
+    vortexRotateZ: 0.35,
+    offsetRotateZ: -0.15,
+  },
+};
 
-  update() {
-    this.smoothed.x += (this.raw.x - this.smoothed.x) * this.cof;
-    this.smoothed.y += (this.raw.y - this.smoothed.y) * this.cof;
-    this.normalized.x = (this.smoothed.x / window.innerWidth) * 2 - 1;
-    this.normalized.y = -(this.smoothed.y / window.innerHeight) * 2 + 1;
-  }
+function layoutFromWidth(width) {
+  if (width >= LAYOUT.desktop) return "desktop";
+  if (width >= LAYOUT.tablet) return "tablet";
+  return "mobile";
 }
 
-class VariableTitle {
-  constructor(element, pointer, cursorAnim) {
-    this.element = element;
-    this.container = element.parentElement;
-    this.pointer = pointer;
-    this.cursorAnim = cursorAnim;
-    this.text = element.textContent.trim();
-    this.chars = [];
-    this.wdth = 100;
-    this.baseWdth = 100;
-    this.baseWeight = 200;
-    this.maxDist = 1;
-    this.fitting = false;
-
-    this.probe = document.createElement("span");
-    this.probe.setAttribute("aria-hidden", "true");
-    this.probe.style.cssText =
-      "position:absolute;left:-9999px;top:0;white-space:nowrap;visibility:hidden;font-family:'Google Sans Flex',sans-serif;font-optical-sizing:auto;line-height:0.82;";
-    document.body.appendChild(this.probe);
-
-    element.textContent = "";
-    for (const char of this.text) {
-      const span = document.createElement("span");
-      span.dataset.char = char;
-      span.textContent = char;
-      element.appendChild(span);
-      this.chars.push({ span });
-    }
-
-    this.resizeObserver = new ResizeObserver(() => {
-      clearTimeout(this.resizeTimeout);
-      this.resizeTimeout = setTimeout(() => this.fit(), 80);
-    });
-    this.resizeObserver.observe(this.container);
-
-    document.fonts.ready.then(() => this.fit());
-    this.fit();
-    this.animate();
-  }
-
-  measure(fontSize, wdth, wght) {
-    this.probe.style.fontSize = `${fontSize}px`;
-    this.probe.style.fontWeight = `${wght}`;
-    this.probe.style.fontVariationSettings = `"wght" ${wght}, "wdth" ${wdth}, "slnt" 0, "ROND" 0`;
-    this.probe.textContent = this.text;
-    return this.probe.getBoundingClientRect().width;
-  }
-
-  applyAxes(wdth, wght) {
-    const settings = `"wght" ${wght}, "wdth" ${wdth}, "slnt" 0, "ROND" 0`;
-    this.element.style.fontWeight = `${wght}`;
-    this.element.style.fontVariationSettings = settings;
-    for (const char of this.chars) {
-      char.span.style.fontWeight = `${wght}`;
-      char.span.style.fontVariationSettings = settings;
-    }
-  }
-
-  fit() {
-    const width = Math.floor(this.element.clientWidth);
-    const height = Math.floor(this.element.clientHeight);
-    if (width <= 0 || height <= 0) return;
-
-    this.fitting = true;
-    const fontSize = Math.max(8, Math.round(height / 0.82));
-    this.element.style.fontSize = `${fontSize}px`;
-
-    let low = 25;
-    let high = 151;
-    let best = 100;
-    const target = width * 0.985;
-
-    for (let index = 0; index < 14; index++) {
-      const mid = (low + high) / 2;
-      const measured = this.measure(fontSize, mid, this.baseWeight);
-      if (measured > target) high = mid;
-      else low = mid;
-      best = mid;
-    }
-
-    this.wdth = Math.round(best);
-    this.applyAxes(this.wdth, this.baseWeight);
-
-    void this.element.offsetWidth;
-    let actual = 0;
-    for (const char of this.chars) {
-      actual += char.span.getBoundingClientRect().width;
-    }
-
-    let safety = 0;
-    while (actual > target && this.wdth > 25 && safety < 8) {
-      this.wdth -= 2;
-      this.applyAxes(this.wdth, this.baseWeight);
-      void this.element.offsetWidth;
-      actual = 0;
-      for (const char of this.chars) {
-        actual += char.span.getBoundingClientRect().width;
-      }
-      safety += 1;
-    }
-
-    this.baseWdth = this.wdth;
-    this.fitting = false;
-  }
-
-  scaleFromDistance(dist) {
-    const min = this.cursorAnim.letterScaleMin;
-    const max = this.cursorAnim.letterScaleMax;
-    const t = 1 - Math.min(dist / this.maxDist, 1);
-    return min + t * t * (max - min);
-  }
-
-  animate() {
-    this.render();
-    requestAnimationFrame(() => this.animate());
-  }
-
-  render() {
-    if (this.fitting) return;
-
-    this.maxDist = this.element.clientWidth * this.cursorAnim.letterRadius;
-    const pointerX = this.pointer.smoothed.x;
-    let nearestScale = this.cursorAnim.letterScaleMin;
-
-    for (const char of this.chars) {
-      const box = char.span.getBoundingClientRect();
-      const dist = Math.abs(pointerX - (box.x + box.width / 1.75));
-      const scaleY = this.scaleFromDistance(dist);
-      char.span.style.transform = `scaleY(${scaleY})`;
-      nearestScale = Math.max(nearestScale, scaleY);
-    }
-
-    this.cursorAnim.letterScale = nearestScale;
-  }
-}
-
-class Scene02 {
+class Scene {
   constructor() {
     this.canvas = document.querySelector("canvas.threejs");
     this.scene = new THREE.Scene();
@@ -214,20 +118,11 @@ class Scene02 {
       pointerY: 0,
       lineWidth: 0.7,
       letterScale: 1,
-      lineWidthMin: 0.9,
-      lineWidthMax: 0.5,
-      letterScaleMin: 0.7,
-      letterScaleMax: 1.8,
-      letterRadius: 1.4,
-      cameraNudgeX: 1.8,
-      cameraNudgeY: 1.2,
-      lookNudgeX: 2.4,
-      lookNudgeY: 1.6,
-      vortexRotateZ: 0.25,
+      ...CURSOR_PRESETS.mobile,
     };
 
     this.setupViewport();
-    this.applyLetterScale();
+    this.applyCursorPreset();
     this.setupCamera();
     this.setupRenderer();
     this.setupLights();
@@ -260,30 +155,16 @@ class Scene02 {
     return this.width / this.height;
   }
 
-  get isMobile() {
-    return this.width < 768;
+  get breakpoint() {
+    return layoutFromWidth(this.width);
   }
 
-  applyLetterScale() {
-    const scale = this.isMobile
-      ? { min: 0.95, max: 2 }
-      : { min: 0.7, max: 1.8 };
-
-    this.cursorAnim.letterScaleMin = scale.min;
-    this.cursorAnim.letterScaleMax = scale.max;
+  applyCursorPreset() {
+    Object.assign(this.cursorAnim, CURSOR_PRESETS[this.breakpoint]);
   }
 
   applyCameraPose() {
-    const pose = this.isMobile
-      ? {
-          position: [10.85, -32.76, 23.83],
-          target: [1.07, 10.05, -6.13],
-        }
-      : {
-          position: [-10.22, -32.2, 24.68],
-          target: [1.33, 6.03, -3.71],
-        };
-
+    const pose = CAMERA_POSES[this.breakpoint];
     this.camera.position.set(...pose.position);
     this.controls.target.set(...pose.target);
     this.baseCameraPosition.copy(this.camera.position);
@@ -299,7 +180,7 @@ class Scene02 {
     this.controls.enableDamping = true;
     this.controls.enabled = this.debugOrbit;
     this.applyCameraPose();
-    this.mobileCamera = this.isMobile;
+    this.layout = this.breakpoint;
     this.cameraLogAt = 0;
     this.controls.addEventListener("change", () => this.logCameraPose());
     this.controls.addEventListener("end", () => this.logCameraPose(true));
@@ -349,6 +230,7 @@ class Scene02 {
     folder.add(this.directional.position, "z", -20, 20, 0.1).name("positionZ");
 
     const debug = this.renderer.inspector.createParameters("Debug");
+    debug.add(this, "layout").name("breakpoint").listen();
     debug
       .add(this, "debugOrbit")
       .name("orbitControls")
@@ -400,6 +282,9 @@ class Scene02 {
     cursor
       .add(this.cursorAnim, "vortexRotateZ", 0, 2, 0.01)
       .name("vortexRotateZ");
+    cursor
+      .add(this.cursorAnim, "offsetRotateZ", -1, 1, 0.01)
+      .name("offsetRotateZ");
   }
 
   createPosterMaterial({ name, lit, shade, threshold = 0 }) {
@@ -534,10 +419,10 @@ class Scene02 {
     this.renderer.setSize(this.width, this.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    if (this.mobileCamera !== this.isMobile) {
-      this.mobileCamera = this.isMobile;
+    if (this.layout !== this.breakpoint) {
+      this.layout = this.breakpoint;
+      this.applyCursorPreset();
       this.applyCameraPose();
-      this.applyLetterScale();
     }
   }
 
@@ -559,7 +444,8 @@ class Scene02 {
     const { lineWidthMin, lineWidthMax, vortexRotateZ } = this.cursorAnim;
     this.vortexLineWidth.value = map(x, -1, 1, lineWidthMin, lineWidthMax);
     this.cursorAnim.lineWidth = this.vortexLineWidth.value;
-    this.vortexMesh.rotation.y = 0.1 + x * vortexRotateZ;
+    this.vortexMesh.rotation.y =
+      this.cursorAnim.offsetRotateZ + x * vortexRotateZ;
   }
 
   tick() {
@@ -578,4 +464,4 @@ class Scene02 {
   }
 }
 
-new Scene02();
+new Scene();

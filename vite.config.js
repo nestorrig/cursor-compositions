@@ -30,6 +30,7 @@ function sceneRoutes() {
 }
 
 export default defineConfig({
+  base: './',
   appType: 'mpa',
   plugins: [sceneRoutes()],
   build: {

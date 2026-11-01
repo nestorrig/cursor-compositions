@@ -9,14 +9,8 @@ import {
   float,
   fract,
   length,
-  lightPosition,
-  lightTargetPosition,
   log,
   mix,
-  mrt,
-  normalWorld,
-  output,
-  pass,
   step,
   time,
   uniform,
@@ -26,8 +20,6 @@ import {
 const palette = {
   red: "#ff1a14",
   shade: "#07050c",
-  sphere: "#f4f0ea",
-  hole: "#05040a",
 };
 
 function map(value, inMin, inMax, outMin, outMax) {
@@ -107,8 +99,7 @@ class Scene {
   constructor() {
     this.canvas = document.querySelector("canvas.threejs");
     this.scene = new THREE.Scene();
-    this.scene.background = null;
-    this.clock = new THREE.Clock();
+    this.debug = /debug/i.test(location.hash);
     this.debugOrbit = false;
     this.pointer = new Pointer(0.12);
     this.baseCameraPosition = new THREE.Vector3();
@@ -125,9 +116,8 @@ class Scene {
     this.applyCursorPreset();
     this.setupCamera();
     this.setupRenderer();
-    this.setupLights();
+    this.setupInspector();
     this.setupVortex();
-    this.setupPostProcessing();
     this.renderer.inspector.profiler.show(this.renderer.inspector.parameters);
 
     this.title = new VariableTitle(
@@ -207,28 +197,13 @@ class Scene {
 
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.toneMappingExposure = 1;
-    this.renderer.shadowMap.enabled = false;
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.inspector = new Inspector();
-    this.renderer.inspector.domElement.style.display = "none";
+    if (!this.debug) this.renderer.inspector.domElement.style.display = "none";
   }
 
-  setupLights() {
-    this.directional = new THREE.DirectionalLight(0xffffff, 1);
-    this.directional.position.set(5, 7, 10);
-    this.scene.add(this.directional);
-    this.scene.add(this.directional.target);
-
-    this.lightDirectionNode = lightPosition(this.directional)
-      .sub(lightTargetPosition(this.directional))
-      .normalize();
-
-    const folder = this.renderer.inspector.createParameters("Light");
-    folder.add(this.directional.position, "x", -20, 20, 0.1).name("positionX");
-    folder.add(this.directional.position, "y", 0.1, 20, 0.1).name("positionY");
-    folder.add(this.directional.position, "z", -20, 20, 0.1).name("positionZ");
-
+  setupInspector() {
     const debug = this.renderer.inspector.createParameters("Debug");
     debug.add(this, "layout").name("breakpoint").listen();
     debug
@@ -287,28 +262,6 @@ class Scene {
       .name("offsetRotateZ");
   }
 
-  createPosterMaterial({ name, lit, shade, threshold = 0 }) {
-    const litColor = uniform(color(lit));
-    const shadeColor = uniform(color(shade));
-    const cutoff = uniform(threshold);
-
-    const facingLight = step(cutoff, normalWorld.dot(this.lightDirectionNode));
-
-    const material = new THREE.MeshBasicNodeMaterial();
-    material.colorNode = mix(shadeColor, litColor, facingLight);
-    material.mrtNode = mrt({
-      output,
-      normal: normalWorld,
-    });
-
-    const folder = this.renderer.inspector.createParameters(name);
-    folder.addColor(litColor, "value").name("lit");
-    folder.addColor(shadeColor, "value").name("shadow");
-    folder.add(cutoff, "value", -1, 1, 0.01).name("threshold");
-
-    return material;
-  }
-
   createVortexGeometry() {
     const { inner, outer, depth, power } = this.vortexShape;
     const geometry = new THREE.RingGeometry(inner, outer, 128, 64);
@@ -326,7 +279,6 @@ class Scene {
     }
 
     position.needsUpdate = true;
-    geometry.computeVertexNormals();
     geometry.computeBoundingSphere();
     return geometry;
   }
@@ -345,7 +297,6 @@ class Scene {
     const turns = uniform(0);
     const lineWidth = uniform(0.7);
     const spin = uniform(0.82);
-    this.vortexSpeed = speed;
     this.vortexLineWidth = lineWidth;
 
     const centered = uv().mul(2).sub(1);
@@ -395,22 +346,6 @@ class Scene {
     shape
       .add(this.vortexShape, "power", 0.2, 8, 0.01)
       .onChange(() => this.rebuildVortexGeometry());
-  }
-
-  setupPostProcessing() {
-    this.pipeline = new THREE.RenderPipeline(this.renderer);
-    this.pipeline.outputColorTransform = false;
-
-    const scenePass = pass(this.scene, this.camera);
-    scenePass.transparent = true;
-    scenePass.setMRT(
-      mrt({
-        output,
-        normal: normalWorld,
-      }),
-    );
-
-    this.pipeline.outputNode = scenePass.getTextureNode("output");
   }
 
   resize() {

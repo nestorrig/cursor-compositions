@@ -204,7 +204,7 @@ class Scene {
   }
 
   setupInspector() {
-    const debug = this.renderer.inspector.createParameters("Debug");
+    const debug = this.renderer.inspector.createParameters("Debug").close();
     debug.add(this, "layout").name("breakpoint").listen();
     debug
       .add(this, "debugOrbit")
@@ -214,7 +214,7 @@ class Scene {
         if (!value) this.applyCameraPose();
       });
 
-    const cursor = this.renderer.inspector.createParameters("Cursor");
+    const cursor = this.renderer.inspector.createParameters("Cursor").close();
     cursor
       .add(this.cursorAnim, "pointerX", -1, 1, 0.01)
       .name("pointerX")
@@ -324,7 +324,7 @@ class Scene {
     this.vortexMesh.rotation.x = -0.48;
     this.scene.add(this.vortexMesh);
 
-    const folder = this.renderer.inspector.createParameters("Vortex");
+    const folder = this.renderer.inspector.createParameters("Vortex").close();
     folder.addColor(litColor, "value").name("lit");
     folder.addColor(shadeColor, "value").name("shadow");
     folder.add(speed, "value", 0, 4, 0.01).name("speed");
@@ -333,7 +333,7 @@ class Scene {
     folder.add(lineWidth, "value", 0.05, 0.95, 0.01).name("lineWidth");
     folder.add(spin, "value", 0, 2, 0.01).name("spin");
 
-    const shape = this.renderer.inspector.createParameters("Shape");
+    const shape = this.renderer.inspector.createParameters("Shape").close();
     shape
       .add(this.vortexShape, "inner", 0.05, 8, 0.01)
       .onChange(() => this.rebuildVortexGeometry());

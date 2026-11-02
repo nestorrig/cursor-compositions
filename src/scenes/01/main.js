@@ -1,47 +1,30 @@
 import * as THREE from "three/webgpu";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { Inspector } from "three/addons/inspector/Inspector.js";
 import {
   color,
-  lightPosition,
-  lightTargetPosition,
+  Fn,
   mix,
   mrt,
+  mx_noise_float,
   normalWorld,
   output,
   pass,
   renderOutput,
-  shadow,
+  screenCoordinate,
+  screenUV,
   step,
+  texture,
   uniform,
+  vec3,
+  vec4,
 } from "three/tsl";
 import { fxaa } from "three/addons/tsl/display/FXAANode.js";
-import risoColors from "riso-colors";
-
-function riso(name) {
-  const swatch = risoColors.find((ink) => ink.name === name);
-  if (!swatch) throw new Error(`Riso color not found: ${name}`);
-  return swatch.hex;
-}
-
-const risoInkMap = Object.fromEntries(
-  risoColors.map((ink) => [ink.name, ink.hex]),
-);
-
-function risoHex(value) {
-  if (typeof value === "string" && !value.startsWith("#")) return riso(value);
-  return value;
-}
-
-const palette = {
-  blue: riso("Blue"),
-  red: riso("Cranberry"),
-  black: riso("Midnight"),
-  burgundy: riso("Burgundy"),
-};
-
-const getRandomRisoColor = () =>
-  risoColors[Math.floor(Math.random() * risoColors.length)];
+import gsap from "gsap";
+import { sobel } from "three/addons/tsl/display/SobelOperatorNode.js";
+import { Pointer } from "../02/Pointer.js";
+import { createBasicNodeMaterial } from "../../lib/posterMaterial.js";
+import { InkFluid } from "./inkFluid.js";
+import { setupDebug } from "./debug.js";
 
 const randomRange = (min, max) => Math.random() * (max - min) + min;
 
@@ -49,16 +32,23 @@ class Scene01 {
   constructor() {
     this.canvas = document.querySelector("canvas.threejs");
     this.scene = new THREE.Scene();
+    this.backgroundColor = new THREE.Color("#fff");
+    this.scene.background = this.backgroundColor;
+    this.debug = /debug/i.test(location.hash);
+    this.debugOrbit = false;
+    this.clock = new THREE.Clock();
 
     this.setupViewport();
     this.setupCamera();
     this.setupRenderer();
+
+    this.pointer = new Pointer(0.18);
+    this.inkFluid = new InkFluid(this.pointer, this.renderer);
+    this.inkFluid.init();
     this.setupLights();
-    // this.setupFloor();
-    // this.setupPrismGrid();
     this.setupPrismalPiramid();
     this.setupPostProcessing();
-    this.renderer.inspector.profiler.show(this.renderer.inspector.parameters);
+    setupDebug(this);
 
     this.resize();
     this.renderer.setAnimationLoop(() => this.tick());
@@ -81,12 +71,34 @@ class Scene01 {
 
   setupCamera() {
     this.camera = new THREE.PerspectiveCamera(35, this.aspect, 0.1, 100);
-    this.camera.position.set(18, -8, -12);
+    this.cameraHomes = {
+      mobile: new THREE.Vector3(-26, -14, -26),
+      tablet: new THREE.Vector3(-20, -11, -20),
+      desktop: new THREE.Vector3(-15, -8, -15),
+    };
+    this.cameraHome = this.cameraHomes.mobile.clone();
+    this.lookHome = new THREE.Vector3(0.1, 0.4, -0.2);
+    this.cameraTarget = this.cameraHome.clone();
+    this.parallax = { x: 5.2, y: 5.1, damp: 0.5 };
+    this.updateCameraHome();
+    this.camera.position.copy(this.cameraHome);
     this.scene.add(this.camera);
 
     this.controls = new OrbitControls(this.camera, this.canvas);
-    this.controls.target.set(0.1, 0.4, -0.2);
+    this.controls.target.copy(this.lookHome);
     this.controls.enableDamping = true;
+    this.controls.enabled = false;
+    this.camera.lookAt(this.lookHome);
+  }
+
+  get cameraBreakpoint() {
+    if (this.width >= 1024) return "desktop";
+    if (this.width >= 720) return "tablet";
+    return "mobile";
+  }
+
+  updateCameraHome() {
+    this.cameraHome.copy(this.cameraHomes[this.cameraBreakpoint]);
   }
 
   setupRenderer() {
@@ -94,126 +106,28 @@ class Scene01 {
       canvas: this.canvas,
       antialias: false,
     });
-
-    this.toneMappingObject = {
-      NoToneMapping: THREE.NoToneMapping,
-      LinearToneMapping: THREE.LinearToneMapping,
-      ReinhardToneMapping: THREE.ReinhardToneMapping,
-      CineonToneMapping: THREE.CineonToneMapping,
-      ACESFilmicToneMapping: THREE.ACESFilmicToneMapping,
-      AgXToneMapping: THREE.AgXToneMapping,
-      NeutralToneMapping: THREE.NeutralToneMapping,
-      CustomToneMapping: THREE.CustomToneMapping,
-    };
-
-    this.renderer.toneMapping = THREE.NeutralToneMapping; // * Todo usar NeutralToneMapping despues;
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1;
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.BasicShadowMap;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.inspector = new Inspector();
-
-    const toneMapping =
-      this.renderer.inspector.createParameters("Tone Mapping");
-    toneMapping
-      .add(this.renderer, "toneMapping", this.toneMappingObject)
-      .name("toneMapping");
-    toneMapping
-      .add(this.renderer, "toneMappingExposure", 0, 4, 0.01)
-      .name("exposure");
   }
 
   setupLights() {
+    this.ambient = new THREE.AmbientLight(0xffffff, 1.5);
+    this.scene.add(this.ambient);
+
     this.directional = new THREE.DirectionalLight(0xffffff, 1);
-    this.directional.castShadow = true;
     this.directional.position.set(10, -5, 6);
-    this.directional.shadow.mapSize.set(2048 * 2, 2048 * 2);
-    this.directional.shadow.camera.near = 0.5;
-    this.directional.shadow.camera.far = 40;
-    this.directional.shadow.camera.left = -16;
-    this.directional.shadow.camera.right = 16;
-    this.directional.shadow.camera.top = 16;
-    this.directional.shadow.camera.bottom = -16;
-    // this.directional.shadow.bias = -0.0008;
-    // this.directional.shadow.normalBias = 0.01;
     this.scene.add(this.directional);
     this.scene.add(this.directional.target);
 
-    this.lightDirectionNode = lightPosition(this.directional)
-      .sub(lightTargetPosition(this.directional))
-      .normalize();
-    this.shadowNode = shadow(this.directional);
-
-    const folder = this.renderer.inspector.createParameters("Light");
-    folder.add(this.directional.position, "x", -20, 20, 0.1).name("positionX");
-    folder.add(this.directional.position, "y", -10, 20, 0.1).name("positionY");
-    folder.add(this.directional.position, "z", -20, 20, 0.1).name("positionZ");
+    this.hemisphere = new THREE.HemisphereLight(0xffffff, 0x334455, 0.45);
+    this.scene.add(this.hemisphere);
   }
 
-  createPosterMaterial({
-    name,
-    lit,
-    shade,
-    threshold = 0,
-    receiveCast = false,
-  }) {
-    const inks = {
-      lit: risoHex(lit),
-      shade: risoHex(shade),
-    };
-    const litColor = uniform(color(inks.lit));
-    const shadeColor = uniform(color(inks.shade));
-    const cutoff = uniform(threshold);
-
-    const facingLight = step(cutoff, normalWorld.dot(this.lightDirectionNode));
-    const litMask = receiveCast
-      ? facingLight.mul(step(0.5, this.shadowNode))
-      : facingLight;
-
-    const material = new THREE.MeshBasicNodeMaterial();
-    material.colorNode = mix(shadeColor, litColor, litMask);
-    material.mrtNode = mrt({
-      output,
-      normal: normalWorld,
+  blackMaterial() {
+    return createBasicNodeMaterial({
+      color: "#000000",
     });
-
-    const folder = this.renderer.inspector.createParameters(name);
-    folder
-      .add(inks, "lit", risoInkMap)
-      .name("lit")
-      .onChange((hex) => litColor.value.set(hex));
-    folder
-      .add(inks, "shade", risoInkMap)
-      .name("shadow")
-      .onChange((hex) => shadeColor.value.set(hex));
-    folder.add(cutoff, "value", -1, 1, 0.01).name("threshold");
-
-    return material;
-  }
-
-  setupFloor() {
-    this.backgroundColor = new THREE.Color(palette.black);
-    this.scene.background = this.backgroundColor;
-
-    const material = this.createPosterMaterial({
-      name: "Floor",
-      lit: palette.burgundy,
-      shade: palette.black,
-      receiveCast: true,
-    });
-
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), material);
-    mesh.rotation.x = -Math.PI * 0.5;
-    mesh.receiveShadow = true;
-    this.scene.add(mesh);
-
-    const folder = this.renderer.inspector.createParameters("Background");
-    folder
-      .addColor({ value: this.backgroundColor }, "value")
-      .name("color")
-      .onChange((value) => {
-        this.backgroundColor.set(value);
-      });
   }
 
   setupPrismalPiramid() {
@@ -226,7 +140,7 @@ class Scene01 {
       tipOffset: -1.2,
       groupY: -5,
       groupScale: 0.5,
-      sphereCount: 3,
+      sphereCount: 5,
       sphereY: 15,
       sphereBaseScale: 5,
       sphereSpread: 8,
@@ -235,37 +149,43 @@ class Scene01 {
     this.prismalPiramid = new THREE.Group();
     this.scene.add(this.prismalPiramid);
 
-    this.pyramidMaterial = this.createPosterMaterial({
-      name: "Prismal Piramid",
-      lit: getRandomRisoColor().hex,
-      shade: getRandomRisoColor().hex,
+    this.pyramidMaterial = new THREE.MeshStandardNodeMaterial({
+      color: "black",
     });
-    this.sphereMaterial = this.createPosterMaterial({
-      name: "Top Sphere",
-      lit: getRandomRisoColor().hex,
-      shade: getRandomRisoColor().hex,
-      receiveCast: true,
-    });
+    this.sphereMaterial = this.blackMaterial();
+    this.centerSphereMaterial = this.blackMaterial();
+    this.orbitParams = {
+      duration: 18,
+      floatAmp: 1.4,
+      floatDuration: 2.6,
+      tilt: 0.22,
+    };
+    this.prismSpinParams = {
+      delayMin: 0.2,
+      delayMax: 1.2,
+      duration: 0.8,
+    };
 
     this.rebuildPyramid();
-    this.setupPyramidInspector();
   }
 
   clearPyramid() {
     const disposed = new Set();
 
-    while (this.prismalPiramid.children.length > 0) {
-      const child = this.prismalPiramid.children[0];
-      this.prismalPiramid.remove(child);
-
+    this.prismalPiramid.traverse((child) => {
       if (child.geometry && !disposed.has(child.geometry)) {
         disposed.add(child.geometry);
         child.geometry.dispose();
       }
-    }
+    });
+
+    this.prismalPiramid.clear();
   }
 
   rebuildPyramid() {
+    this.stopSphereMotion();
+    this.stopPrismSpin();
+
     const {
       steps,
       stepThickness,
@@ -275,10 +195,6 @@ class Scene01 {
       tipOffset,
       groupY,
       groupScale,
-      sphereCount,
-      sphereY,
-      sphereBaseScale,
-      sphereSpread,
     } = this.pyramidParams;
 
     this.clearPyramid();
@@ -286,6 +202,7 @@ class Scene01 {
     this.prismalPiramid.scale.setScalar(groupScale);
 
     const slabGeometry = new THREE.BoxGeometry(1, 1, 1);
+    this.pyramidSlabs = [];
 
     for (let index = 0; index < steps; index++) {
       const mesh = new THREE.Mesh(slabGeometry, this.pyramidMaterial);
@@ -293,6 +210,7 @@ class Scene01 {
       mesh.position.set(0, index * stepSpacing, 0);
       mesh.scale.set(size, stepThickness, size);
       this.prismalPiramid.add(mesh);
+      this.pyramidSlabs.push(mesh);
     }
 
     const tipGeometry = new THREE.ConeGeometry(1, 1, 4, 1, true).toNonIndexed();
@@ -304,84 +222,153 @@ class Scene01 {
     tip.rotation.set(Math.PI, Math.PI * 0.25, 0);
     this.prismalPiramid.add(tip);
 
-    const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
+    this.rebuildSpheres();
+  }
 
-    for (let index = 0; index < sphereCount; index++) {
-      const sphere = new THREE.Mesh(sphereGeometry, this.sphereMaterial);
-      const angle = index * 2.1;
-      const radius = index === 0 ? 0 : sphereSpread * (0.35 + index * 0.2);
-      const scale = sphereBaseScale * Math.pow(0.32, index);
+  rebuildSpheres() {
+    const { sphereCount, sphereY, sphereBaseScale, sphereSpread } =
+      this.pyramidParams;
+
+    const geometry = new THREE.SphereGeometry(1, 64, 64);
+
+    this.centerSphere = null;
+    this.orbitPivot = new THREE.Group();
+    this.orbitPivot.position.set(0, sphereY, 0);
+    this.orbitPivot.rotation.x = this.orbitParams.tilt;
+    this.prismalPiramid.add(this.orbitPivot);
+
+    if (sphereCount >= 1) {
+      this.centerSphere = new THREE.Mesh(geometry, this.centerSphereMaterial);
+      this.centerSphere.position.set(0, sphereY, 0);
+      this.centerSphere.scale.setScalar(sphereBaseScale);
+      this.prismalPiramid.add(this.centerSphere);
+    }
+
+    const orbiters = Math.max(0, sphereCount - 1);
+
+    for (let index = 0; index < orbiters; index++) {
+      const sphere = new THREE.Mesh(geometry, this.sphereMaterial);
+      const angle = (index / orbiters) * Math.PI * 2;
+      const scale = sphereBaseScale * (0.22 + (index % 3) * 0.06);
 
       sphere.position.set(
-        Math.cos(angle) * radius,
-        sphereY,
-        Math.sin(angle) * radius,
+        Math.cos(angle) * sphereSpread,
+        0,
+        Math.sin(angle) * sphereSpread,
       );
       sphere.scale.setScalar(scale);
-      this.prismalPiramid.add(sphere);
+      this.orbitPivot.add(sphere);
     }
+
+    this.startSphereMotion();
+    this.startPrismSpin();
   }
 
-  setupPyramidInspector() {
-    const folder = this.renderer.inspector.createParameters("Pyramid");
-    const rebuild = () => this.rebuildPyramid();
-
-    folder.add(this.pyramidParams, "steps", 1, 24, 1).onChange(rebuild);
-    folder
-      .add(this.pyramidParams, "stepThickness", 0.05, 2, 0.01)
-      .onChange(rebuild);
-    folder
-      .add(this.pyramidParams, "stepSpacing", 0.2, 3, 0.01)
-      .onChange(rebuild);
-    folder.add(this.pyramidParams, "stepScale", 0.2, 6, 0.01).onChange(rebuild);
-    folder.add(this.pyramidParams, "tipSize", 0.1, 4, 0.01).onChange(rebuild);
-    folder.add(this.pyramidParams, "tipOffset", -2, 2, 0.01).onChange(rebuild);
-    folder.add(this.pyramidParams, "groupY", -20, 10, 0.1).onChange(rebuild);
-    folder
-      .add(this.pyramidParams, "groupScale", 0.1, 2, 0.01)
-      .onChange(rebuild);
-    folder.add(this.pyramidParams, "sphereCount", 0, 8, 1).onChange(rebuild);
-    folder.add(this.pyramidParams, "sphereY", 0, 30, 0.1).onChange(rebuild);
-    folder
-      .add(this.pyramidParams, "sphereBaseScale", 0.2, 12, 0.01)
-      .onChange(rebuild);
-    folder
-      .add(this.pyramidParams, "sphereSpread", 0, 20, 0.1)
-      .onChange(rebuild);
+  stopPrismSpin() {
+    this.prismSpinCall?.kill();
+    this.prismSpinCall = null;
+    this.pyramidSlabs?.forEach((mesh) => gsap.killTweensOf(mesh.rotation));
   }
 
-  setupPrismGrid() {
-    const columns = 5;
-    const rows = 5;
-    const spacing = 2;
-    const size = 0.8;
-    const geometry = new THREE.BoxGeometry(size, 1, size);
-    const material = this.createPosterMaterial({
-      name: "Prisms",
-      lit: palette.red,
-      shade: palette.burgundy,
+  startPrismSpin() {
+    this.stopPrismSpin();
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (reduceMotion || !this.pyramidSlabs?.length) return;
+
+    this.queuePrismSpin();
+  }
+
+  queuePrismSpin() {
+    const min = Math.min(
+      this.prismSpinParams.delayMin,
+      this.prismSpinParams.delayMax,
+    );
+    const max = Math.max(
+      this.prismSpinParams.delayMin,
+      this.prismSpinParams.delayMax,
+    );
+    this.prismSpinCall = gsap.delayedCall(randomRange(min, max), () =>
+      this.spinRandomPrism(),
+    );
+  }
+
+  spinRandomPrism() {
+    const idle = this.pyramidSlabs.filter(
+      (mesh) => !gsap.isTweening(mesh.rotation),
+    );
+    const mesh = idle[Math.floor(Math.random() * idle.length)];
+
+    if (!mesh) {
+      this.queuePrismSpin();
+      return;
+    }
+
+    const turn = Math.random() < 0.5 ? Math.PI / 2 : -Math.PI / 2;
+    gsap.to(mesh.rotation, {
+      y: `+=${turn}`,
+      duration: this.prismSpinParams.duration,
+      ease: "expo.inOut",
+      overwrite: true,
+      onComplete: () => this.queuePrismSpin(),
     });
+  }
 
-    const group = new THREE.Group();
-    const offsetX = ((columns - 1) * spacing) / 2;
-    const offsetZ = ((rows - 1) * spacing) / 2;
+  stopSphereMotion() {
+    this.sphereMotion?.kill();
+    this.sphereMotion = null;
+  }
 
-    for (let column = 0; column < columns; column++) {
-      for (let row = 0; row < rows; row++) {
-        const height = randomRange(5, 7);
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.scale.y = height;
-        mesh.position.set(
-          column * spacing - offsetX,
-          height * 0.5,
-          row * spacing - offsetZ,
-        );
-        mesh.castShadow = true;
-        group.add(mesh);
-      }
+  startSphereMotion() {
+    this.stopSphereMotion();
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (reduceMotion) return;
+
+    this.sphereMotion = gsap.timeline();
+
+    if (this.orbitPivot) {
+      this.sphereMotion.to(
+        this.orbitPivot.rotation,
+        {
+          y: `+=${Math.PI * 2}`,
+          duration: this.orbitParams.duration,
+          repeat: -1,
+          ease: "none",
+        },
+        0,
+      );
     }
 
-    this.scene.add(group);
+    if (this.centerSphere) {
+      gsap.set(this.centerSphere.position, { y: this.pyramidParams.sphereY });
+      this.sphereMotion.to(
+        this.centerSphere.position,
+        {
+          y: this.pyramidParams.sphereY + this.orbitParams.floatAmp,
+          duration: this.orbitParams.floatDuration,
+          yoyo: true,
+          repeat: -1,
+          ease: "sine.inOut",
+        },
+        0,
+      );
+    }
+  }
+
+  createRisographNode(inputNode) {
+    return Fn(() => {
+      const sceneColor = inputNode.rgb;
+      const grainUv = screenCoordinate.xy.div(this.risograph.noiseScale);
+      const grain = mx_noise_float(grainUv);
+      const printed = sceneColor.add(grain.mul(this.risograph.amount));
+
+      return vec4(mix(sceneColor, printed, this.risograph.strength), 1);
+    })();
   }
 
   setupPostProcessing() {
@@ -396,9 +383,65 @@ class Scene01 {
       }),
     );
 
-    this.pipeline.outputNode = fxaa(
-      renderOutput(scenePass.getTextureNode("output")),
+    this.risograph = {
+      strength: uniform(1),
+      amount: uniform(0.25),
+      noiseScale: uniform(2),
+    };
+    this.sobel = {
+      low: uniform(0),
+      high: uniform(0.0),
+      inner: uniform(color("#004bff")),
+      innerBoost: uniform(1),
+      outer: uniform(color("#fff")),
+    };
+
+    const sceneColor = scenePass.getTextureNode("output");
+    const sobelValue = sobel(sceneColor);
+    const sobelPoster = sobelValue.remapClamp(
+      this.sobel.low,
+      this.sobel.high,
+      this.sobel.inner.mul(this.sobel.innerBoost),
+      this.sobel.outer,
     );
+    const sobelSwapped = sobelValue.remapClamp(
+      this.sobel.low,
+      this.sobel.high,
+      this.sobel.outer,
+      this.sobel.inner.mul(this.sobel.innerBoost),
+    );
+    const revealed = this.createCursorRevealNode({
+      poster: sobelPoster,
+      swapped: sobelSwapped,
+      sceneColor,
+    });
+    const printed = this.createRisographNode(revealed);
+
+    this.pipeline.outputNode = fxaa(renderOutput(printed));
+  }
+
+  createCursorRevealNode({ poster, swapped, sceneColor }) {
+    this.cursorReveal = {
+      mode: "invert",
+      invert: uniform(1),
+      maskLow: uniform(0.2),
+      debugInk: uniform(0),
+    };
+    this.inkMap = texture(this.inkFluid.texture);
+
+    return Fn(() => {
+      const ink = this.inkMap.sample(screenUV).r;
+      const mask = step(this.cursorReveal.maskLow, ink);
+      const underInk = mix(
+        sceneColor.rgb,
+        swapped.rgb,
+        this.cursorReveal.invert,
+      );
+      const revealed = mix(poster.rgb, underInk, mask);
+      const debugInk = mix(revealed, vec3(ink), this.cursorReveal.debugInk);
+
+      return vec4(debugInk, 1);
+    })();
   }
 
   resize() {
@@ -406,10 +449,57 @@ class Scene01 {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(this.width, this.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.inkFluid.resize();
+    this.updateCameraHome();
+    if (!this.debugOrbit) {
+      this.camera.position.copy(this.cameraHome);
+      this.camera.lookAt(this.lookHome);
+    }
+  }
+
+  updateCameraRig(delta) {
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const x = reduceMotion ? 0 : this.pointer.normalized.x;
+    const y = reduceMotion ? 0 : this.pointer.normalized.y;
+    const lambda = this.parallax.damp;
+
+    this.cameraTarget.set(
+      this.cameraHome.x + x * this.parallax.x,
+      this.cameraHome.y + y * this.parallax.y,
+      this.cameraHome.z,
+    );
+
+    this.camera.position.x = THREE.MathUtils.damp(
+      this.camera.position.x,
+      this.cameraTarget.x,
+      lambda,
+      delta,
+    );
+    this.camera.position.y = THREE.MathUtils.damp(
+      this.camera.position.y,
+      this.cameraTarget.y,
+      lambda,
+      delta,
+    );
+    this.camera.position.z = THREE.MathUtils.damp(
+      this.camera.position.z,
+      this.cameraTarget.z,
+      lambda,
+      delta,
+    );
+    this.camera.lookAt(this.lookHome);
   }
 
   tick() {
-    this.controls.update();
+    const delta = this.clock.getDelta();
+    this.cursorReveal.invert.value =
+      this.cursorReveal.mode === "invert" ? 1 : 0;
+    this.inkFluid.step();
+    if (this.inkMap) this.inkMap.value = this.inkFluid.texture;
+    if (this.debugOrbit) this.controls.update();
+    else this.updateCameraRig(delta);
     this.pipeline.render();
   }
 }

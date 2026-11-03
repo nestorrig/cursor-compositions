@@ -30,8 +30,8 @@ import {
   vec3,
 } from "three/tsl";
 import gsap from "gsap";
-import { Pointer } from "../02/Pointer.js";
-import { InkFluid } from "../01/inkFluid.js";
+import { Pointer } from "../../lib/pointer.js";
+import { InkFluid } from "../../lib/inkFluid.js";
 import { createLightformerEnvironment } from "../../lib/lightformers.js";
 import { setupDebug } from "./debug.js";
 

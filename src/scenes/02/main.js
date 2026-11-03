@@ -1,8 +1,8 @@
 import * as THREE from "three/webgpu";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { Inspector } from "three/addons/inspector/Inspector.js";
-import { Pointer } from "./Pointer.js";
+import { Pointer } from "../../lib/pointer.js";
 import { VariableTitle } from "./VariableTitle.js";
+import { setupDebug } from "./debug.js";
 import {
   atan,
   color,
@@ -116,9 +116,7 @@ class Scene {
     this.applyCursorPreset();
     this.setupCamera();
     this.setupRenderer();
-    this.setupInspector();
     this.setupVortex();
-    this.renderer.inspector.profiler.show(this.renderer.inspector.parameters);
 
     this.title = new VariableTitle(
       document.querySelector("#title"),
@@ -126,6 +124,7 @@ class Scene {
       this.cursorAnim,
     );
 
+    setupDebug(this);
     this.resize();
     this.renderer.setAnimationLoop(() => this.tick());
   }
@@ -172,8 +171,6 @@ class Scene {
     this.applyCameraPose();
     this.layout = this.breakpoint;
     this.cameraLogAt = 0;
-    this.controls.addEventListener("change", () => this.logCameraPose());
-    this.controls.addEventListener("end", () => this.logCameraPose(true));
   }
 
   logCameraPose(force = false) {
@@ -199,67 +196,6 @@ class Scene {
     this.renderer.toneMappingExposure = 1;
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.inspector = new Inspector();
-    if (!this.debug) this.renderer.inspector.domElement.style.display = "none";
-  }
-
-  setupInspector() {
-    const debug = this.renderer.inspector.createParameters("Debug").close();
-    debug.add(this, "layout").name("breakpoint").listen();
-    debug
-      .add(this, "debugOrbit")
-      .name("orbitControls")
-      .onChange((value) => {
-        this.controls.enabled = value;
-        if (!value) this.applyCameraPose();
-      });
-
-    const cursor = this.renderer.inspector.createParameters("Cursor").close();
-    cursor
-      .add(this.cursorAnim, "pointerX", -1, 1, 0.01)
-      .name("pointerX")
-      .listen();
-    cursor
-      .add(this.cursorAnim, "pointerY", -1, 1, 0.01)
-      .name("pointerY")
-      .listen();
-    cursor
-      .add(this.cursorAnim, "lineWidth", 0.05, 0.95, 0.01)
-      .name("lineWidth")
-      .listen();
-    cursor
-      .add(this.cursorAnim, "letterScale", 1, 3, 0.01)
-      .name("letterScale")
-      .listen();
-    cursor
-      .add(this.cursorAnim, "lineWidthMin", 0.05, 0.95, 0.01)
-      .name("lineWidthMin");
-    cursor
-      .add(this.cursorAnim, "lineWidthMax", 0.05, 0.95, 0.01)
-      .name("lineWidthMax");
-    cursor
-      .add(this.cursorAnim, "letterScaleMin", 0.4, 2, 0.01)
-      .name("letterScaleMin");
-    cursor
-      .add(this.cursorAnim, "letterScaleMax", 1, 3, 0.01)
-      .name("letterScaleMax");
-    cursor
-      .add(this.cursorAnim, "letterRadius", 0.2, 3, 0.01)
-      .name("letterRadius");
-    cursor
-      .add(this.cursorAnim, "cameraNudgeX", 0, 8, 0.01)
-      .name("cameraNudgeX");
-    cursor
-      .add(this.cursorAnim, "cameraNudgeY", 0, 8, 0.01)
-      .name("cameraNudgeY");
-    cursor.add(this.cursorAnim, "lookNudgeX", 0, 8, 0.01).name("lookNudgeX");
-    cursor.add(this.cursorAnim, "lookNudgeY", 0, 8, 0.01).name("lookNudgeY");
-    cursor
-      .add(this.cursorAnim, "vortexRotateZ", 0, 2, 0.01)
-      .name("vortexRotateZ");
-    cursor
-      .add(this.cursorAnim, "offsetRotateZ", -1, 1, 0.01)
-      .name("offsetRotateZ");
   }
 
   createVortexGeometry() {
@@ -290,27 +226,29 @@ class Scene {
   }
 
   setupVortex() {
-    const litColor = uniform(color(palette.red));
-    const shadeColor = uniform(color(palette.shade));
-    const speed = uniform(1.6);
-    const density = uniform(11.9);
-    const turns = uniform(0);
-    const lineWidth = uniform(0.7);
-    const spin = uniform(0.82);
-    this.vortexLineWidth = lineWidth;
+    this.vortex = {
+      lit: uniform(color(palette.red)),
+      shade: uniform(color(palette.shade)),
+      speed: uniform(1.6),
+      density: uniform(11.9),
+      turns: uniform(0),
+      lineWidth: uniform(0.7),
+      spin: uniform(0.82),
+    };
+    this.vortexLineWidth = this.vortex.lineWidth;
 
     const centered = uv().mul(2).sub(1);
     const radius = length(centered).max(0.0008);
-    const angle = atan(centered.y, centered.x).add(time.mul(spin));
+    const angle = atan(centered.y, centered.x).add(time.mul(this.vortex.spin));
     const spiral = angle
       .div(float(Math.PI * 2))
-      .mul(turns)
-      .add(log(radius).mul(density))
-      .add(time.mul(speed));
-    const line = step(lineWidth, fract(spiral));
+      .mul(this.vortex.turns)
+      .add(log(radius).mul(this.vortex.density))
+      .add(time.mul(this.vortex.speed));
+    const line = step(this.vortex.lineWidth, fract(spiral));
 
     const material = new THREE.MeshBasicNodeMaterial();
-    material.colorNode = mix(shadeColor, litColor, line);
+    material.colorNode = mix(this.vortex.shade, this.vortex.lit, line);
     material.side = THREE.DoubleSide;
 
     this.vortexShape = {
@@ -323,29 +261,6 @@ class Scene {
     this.vortexMesh = new THREE.Mesh(this.createVortexGeometry(), material);
     this.vortexMesh.rotation.x = -0.48;
     this.scene.add(this.vortexMesh);
-
-    const folder = this.renderer.inspector.createParameters("Vortex").close();
-    folder.addColor(litColor, "value").name("lit");
-    folder.addColor(shadeColor, "value").name("shadow");
-    folder.add(speed, "value", 0, 4, 0.01).name("speed");
-    folder.add(density, "value", 2, 40, 0.1).name("density");
-    folder.add(turns, "value", 0, 8, 1).name("turns");
-    folder.add(lineWidth, "value", 0.05, 0.95, 0.01).name("lineWidth");
-    folder.add(spin, "value", 0, 2, 0.01).name("spin");
-
-    const shape = this.renderer.inspector.createParameters("Shape").close();
-    shape
-      .add(this.vortexShape, "inner", 0.05, 8, 0.01)
-      .onChange(() => this.rebuildVortexGeometry());
-    shape
-      .add(this.vortexShape, "outer", 4, 40, 0.1)
-      .onChange(() => this.rebuildVortexGeometry());
-    shape
-      .add(this.vortexShape, "depth", 1, 60, 0.1)
-      .onChange(() => this.rebuildVortexGeometry());
-    shape
-      .add(this.vortexShape, "power", 0.2, 8, 0.01)
-      .onChange(() => this.rebuildVortexGeometry());
   }
 
   resize() {

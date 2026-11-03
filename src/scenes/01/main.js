@@ -21,9 +21,9 @@ import {
 import { fxaa } from "three/addons/tsl/display/FXAANode.js";
 import gsap from "gsap";
 import { sobel } from "three/addons/tsl/display/SobelOperatorNode.js";
-import { Pointer } from "../02/Pointer.js";
+import { Pointer } from "../../lib/pointer.js";
 import { createBasicNodeMaterial } from "../../lib/posterMaterial.js";
-import { InkFluid } from "./inkFluid.js";
+import { InkFluid } from "../../lib/inkFluid.js";
 import { setupDebug } from "./debug.js";
 
 const randomRange = (min, max) => Math.random() * (max - min) + min;

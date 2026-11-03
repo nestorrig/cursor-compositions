@@ -103,7 +103,7 @@ export function setupRefractionInspector(inspector, refraction) {
     createGlassPass,
     markGlass,
     setupRefractionInspector,
-  } from "./glassPass.js";
+  } from "../../lib/glassPass.js";
 
   // en rebuildSpheres, sobre la esfera de vidrio:
   markGlass(this.centerSphere);

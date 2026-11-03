@@ -1,11 +1,9 @@
 import * as THREE from "three/webgpu";
-import { Inspector } from "three/addons/inspector/Inspector.js";
+import { createInspector, folder } from "../../lib/inspector.js";
 import { risoInkMap } from "../../lib/posterMaterial.js";
 
 export function setupDebug(scene) {
-  scene.renderer.inspector = new Inspector();
-  scene.renderer.inspector.profiler.show(scene.renderer.inspector.parameters);
-
+  createInspector(scene);
   setupDebugFolder(scene);
   setupToneMappingFolder(scene);
   setupLightFolder(scene);
@@ -16,20 +14,6 @@ export function setupDebug(scene) {
   setupSobelFolder(scene);
   setupRisographFolder(scene);
   setupCursorFolder(scene);
-
-  syncInspectorVisibility(scene);
-  window.addEventListener("hashchange", () => {
-    scene.debug = /debug/i.test(location.hash);
-    syncInspectorVisibility(scene);
-  });
-}
-
-function syncInspectorVisibility(scene) {
-  scene.renderer.inspector.domElement.style.display = scene.debug ? "" : "none";
-}
-
-function folder(scene, name) {
-  return scene.renderer.inspector.createParameters(name).close();
 }
 
 function setupDebugFolder(scene) {

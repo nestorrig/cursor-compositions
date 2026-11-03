@@ -52,6 +52,7 @@ export class InkFluid {
       maxVel: 70,
       minSpeed: 0.25,
       stepGap: 55,
+      invertPointerY: false,
     };
 
     this.prev = { x: pointer.raw.x, y: pointer.raw.y };
@@ -378,13 +379,14 @@ export class InkFluid {
   splat(x, y, dx, dy, amount, radius = this.config.splatRadius) {
     const width = Math.max(window.innerWidth, 1);
     const height = Math.max(window.innerHeight, 1);
-    this.splatPoint.value.set(x / width, y / height);
+    const uvY = this.config.invertPointerY ? 1 - y / height : y / height;
+    this.splatPoint.value.set(x / width, uvY);
     this.splatRadius.value = radius;
     this.splatHardness.value = this.config.hardness;
     this.aspectRatio.value = this.simW / Math.max(this.simH, 1);
 
     this.uTarget.value = this.velocity.read.texture;
-    this.splatColor.value.set(dx, dy, 0);
+    this.splatColor.value.set(dx, this.config.invertPointerY ? -dy : dy, 0);
     this.blit(this.splatMaterial, this.velocity.write);
     this.velocity.swap();
 

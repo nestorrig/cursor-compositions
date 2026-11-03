@@ -73,13 +73,13 @@ class Scene01 {
     this.camera = new THREE.PerspectiveCamera(35, this.aspect, 0.1, 100);
     this.cameraHomes = {
       mobile: new THREE.Vector3(-26, -14, -26),
-      tablet: new THREE.Vector3(-20, -11, -20),
+      tablet: new THREE.Vector3(-19, -10.5, -19),
       desktop: new THREE.Vector3(-15, -8, -15),
     };
     this.cameraHome = this.cameraHomes.mobile.clone();
     this.lookHome = new THREE.Vector3(0.1, 0.4, -0.2);
     this.cameraTarget = this.cameraHome.clone();
-    this.parallax = { x: 5.2, y: 5.1, damp: 0.5 };
+    this.parallax = { x: 5.2, y: 5.1, damp: 0.9 };
     this.updateCameraHome();
     this.camera.position.copy(this.cameraHome);
     this.scene.add(this.camera);

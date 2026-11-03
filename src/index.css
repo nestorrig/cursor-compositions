@@ -2,70 +2,115 @@
   box-sizing: border-box;
 }
 
+:root {
+  --fluid-color: #004bff;
+}
+
 html,
 body {
   margin: 0;
   min-height: 100%;
-  background: #11110f;
-  color: #f3efe6;
+  background-color: #fff;
+  color: #004bff;
   font-family: system-ui, sans-serif;
 }
 
 body {
-  display: grid;
   min-height: 100vh;
-  place-items: center;
-  padding: 2rem;
+  isolation: isolate;
+  padding: clamp(1.25rem, 4vw, 3rem);
+  /* background-image: url("data:image/svg+xml;utf8,<svg width='51' height='51' viewBox='0 0 51 51' fill='none' xmlns='http://www.w3.org/2000/svg'><line x1='4.18933' y1='0' x2='4.18933' y2='8.124' stroke='%23004bff'/><line y1='3.93469' x2='8.1989' y2='3.93469' stroke='%23004bff'/></svg>");
+  background-size: 16px 16px; */
+  background-position: 0 0;
 }
 
-main {
-  width: min(36rem, 100%);
+#fluid {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: 100svh;
+  z-index: -1;
+  pointer-events: none;
+}
+
+header,
+nav {
+  position: relative;
+  z-index: 1;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: clamp(1.75rem, 4vw, 3rem);
 }
 
 .kicker {
-  margin: 0 0 0.5rem;
-  letter-spacing: 0.16em;
+  margin: 0;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   font-size: 0.75rem;
-  color: #a39b8c;
 }
 
 h1 {
-  margin: 0 0 2rem;
+  margin: 0;
   font-weight: 500;
-  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  letter-spacing: -0.04em;
 }
 
 nav {
   display: grid;
-  gap: 0.75rem;
+  gap: clamp(1.25rem, 3vw, 2rem);
 }
 
-nav a {
-  display: flex;
-  align-items: baseline;
-  gap: 1rem;
-  padding: 1rem 0;
-  border-top: 1px solid #2c2a26;
+.piece {
+  display: grid;
+  gap: 0.7rem;
   color: inherit;
   text-decoration: none;
 }
 
-nav a:last-child {
-  border-bottom: 1px solid #2c2a26;
+.piece video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1080 / 1350;
+  object-fit: cover;
+  background: #e8eeff;
+  pointer-events: none;
 }
 
-nav span {
-  color: #a39b8c;
+.caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.95rem;
+}
+
+.caption span {
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
 }
 
-nav strong {
+.caption strong {
   font-weight: 500;
-  font-size: 1.25rem;
 }
 
-nav a:hover strong {
+.piece:hover strong,
+.piece:focus-visible strong {
   text-decoration: underline;
-  text-underline-offset: 0.2em;
+  text-underline-offset: 0.22em;
+}
+
+@media (min-width: 840px) {
+  nav {
+    grid-template-columns: repeat(3, 1fr);
+    align-items: start;
+  }
 }

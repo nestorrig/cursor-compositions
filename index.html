@@ -10,24 +10,48 @@
 </head>
 
 <body>
-  <main>
+  <header>
     <p class="kicker">Three.js</p>
     <h1>Composiciones</h1>
-    <nav>
-      <a href="./01/">
+  </header>
+
+  <nav>
+    <a class="piece" href="./01/">
+      <video autoplay muted loop playsinline preload="auto" poster="./previews/cuspide-poster.png" width="1080"
+        height="1350">
+        <source src="./previews/cuspide.mov" type="video/mp4" />
+        <source src="./previews/cuspide.mov" type="video/quicktime" />
+      </video>
+      <span class="caption">
         <span>01</span>
-        <strong>Cubo</strong>
-      </a>
-      <a href="./02/">
+        <strong>Hero 3D</strong>
+      </span>
+    </a>
+    <a class="piece" href="./02/">
+      <video autoplay muted loop playsinline preload="auto" poster="./previews/vertigo-poster.png" width="1080"
+        height="1350">
+        <source src="./previews/vertigo.mov" type="video/mp4" />
+        <source src="./previews/vertigo.mov" type="video/quicktime" />
+      </video>
+      <span class="caption">
         <span>02</span>
-        <strong>Vertigo</strong>
-      </a>
-      <a href="./03/">
+        <strong>Poster</strong>
+      </span>
+    </a>
+    <a class="piece" href="./03/">
+      <video autoplay muted loop playsinline preload="auto" poster="./previews/cubi-poster.png" width="1080"
+        height="1350">
+        <source src="./previews/cubi.mov" type="video/mp4" />
+        <source src="./previews/cubi.mov" type="video/quicktime" />
+      </video>
+      <span class="caption">
         <span>03</span>
-        <strong>Play</strong>
-      </a>
-    </nav>
-  </main>
+        <strong>Personaje</strong>
+      </span>
+    </a>
+  </nav>
+
+  <script type="module" src="/src/index.js"></script>
 </body>
 
 </html>

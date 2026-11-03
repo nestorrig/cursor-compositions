@@ -262,9 +262,9 @@ class Scene {
       scale: 0.3,
     };
     this.cubeGeo = {
-      width: 1.25,
-      height: 1.25,
-      depth: 1.25,
+      width: 1.15,
+      height: 1.15,
+      depth: 1.15,
       segments: 6,
       radius: 0.16,
     };

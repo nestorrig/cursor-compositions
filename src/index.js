@@ -45,3 +45,60 @@ motion.add("(prefers-reduced-motion: no-preference)", () => {
     onComplete: playPreviews,
   });
 });
+
+motion.add(
+  "(prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine)",
+  () => {
+    const pieces = [...document.querySelectorAll(".piece")];
+
+    const cleanups = pieces.map((piece) => {
+      const overlay = piece.querySelector(".overlay");
+      const media = piece.querySelector(".media");
+
+      gsap.set(overlay, { autoAlpha: 0, y: 14 });
+      gsap.set(media, { boxShadow: "0 0 0 rgba(0, 75, 255, 0)" });
+
+      const show = () => {
+        gsap.to(overlay, {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.4,
+          overwrite: "auto",
+        });
+        gsap.to(media, {
+          boxShadow: "0 22px 48px rgba(0, 75, 255, 0.32)",
+          duration: 0.4,
+          overwrite: "auto",
+        });
+      };
+
+      const hide = () => {
+        gsap.to(overlay, {
+          autoAlpha: 0,
+          y: 14,
+          duration: 0.3,
+          overwrite: "auto",
+        });
+        gsap.to(media, {
+          boxShadow: "0 0 0 rgba(0, 75, 255, 0)",
+          duration: 0.3,
+          overwrite: "auto",
+        });
+      };
+
+      piece.addEventListener("pointerenter", show);
+      piece.addEventListener("pointerleave", hide);
+      piece.addEventListener("focus", show);
+      piece.addEventListener("blur", hide);
+
+      return () => {
+        piece.removeEventListener("pointerenter", show);
+        piece.removeEventListener("pointerleave", hide);
+        piece.removeEventListener("focus", show);
+        piece.removeEventListener("blur", hide);
+      };
+    });
+
+    return () => cleanups.forEach((cleanup) => cleanup());
+  },
+);

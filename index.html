@@ -5,51 +5,80 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="./icons.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Composiciones</title>
+  <title>Composiciones con cursor</title>
   <link rel="stylesheet" href="/src/index.css" />
 </head>
 
 <body>
   <header>
-    <p class="kicker">Three.js</p>
-    <h1>Composiciones</h1>
+    <h1>Diseño de Interacciones: Cursor</h1>
+    <div class="ledes">
+      <p class="lede">
+        Este proyecto corresponde a una actividad del curso de Interacción y Render Web
+        Avanzado, impartido por
+        <a href="https://andrew.studio/" target="_blank" rel="noopener noreferrer">Andrew Alvarado</a>,
+        correspondiente al tercer semestre de la licenciatura en Computación Creativa en
+        <a href="https://centro.edu.mx/" target="_blank" rel="noopener noreferrer">CENTRO</a>.
+      </p>
+      <p class="lede">
+        Consiste en una serie de composiciones interactivas hechas con Three.js y WebGPU,
+        pensadas para explorarse con el cursor.
+      </p>
+    </div>
   </header>
 
-  <nav>
-    <a class="piece" href="./01/">
-      <video autoplay muted loop playsinline preload="auto" poster="./previews/cuspide-poster.png" width="1080"
-        height="1350">
-        <source src="./previews/cuspide.mov" type="video/mp4" />
-        <source src="./previews/cuspide.mov" type="video/quicktime" />
-      </video>
-      <span class="caption">
-        <span>01</span>
-        <strong>Hero 3D</strong>
-      </span>
-    </a>
-    <a class="piece" href="./02/">
-      <video autoplay muted loop playsinline preload="auto" poster="./previews/vertigo-poster.png" width="1080"
-        height="1350">
-        <source src="./previews/vertigo.mov" type="video/mp4" />
-        <source src="./previews/vertigo.mov" type="video/quicktime" />
-      </video>
-      <span class="caption">
-        <span>02</span>
-        <strong>Poster</strong>
-      </span>
-    </a>
-    <a class="piece" href="./03/">
-      <video autoplay muted loop playsinline preload="auto" poster="./previews/cubi-poster.png" width="1080"
-        height="1350">
-        <source src="./previews/cubi.mov" type="video/mp4" />
-        <source src="./previews/cubi.mov" type="video/quicktime" />
-      </video>
-      <span class="caption">
-        <span>03</span>
-        <strong>Personaje</strong>
-      </span>
-    </a>
-  </nav>
+  <main>
+    <ol class="pieces">
+      <li>
+        <a class="piece" href="./01/">
+          <figure class="media">
+            <video autoplay muted loop playsinline preload="auto" poster="./previews/cuspide-poster.webp" width="1080"
+              height="1350" aria-hidden="true">
+              <source src="./previews/cuspide.mp4" type="video/mp4" />
+            </video>
+            <figcaption class="overlay">
+              <h2>Hero 3D — Cúspide</h2>
+              <p>
+                Diseño de un hero para algún estudio de arquitectura y arte, con elementos geométricos y técnicas de
+                posprocesado para crear un efecto de impresión en risografía.
+              </p>
+            </figcaption>
+          </figure>
+          <p class="caption">01</p>
+        </a>
+      </li>
+      <li>
+        <a class="piece" href="./02/">
+          <figure class="media">
+            <video autoplay muted loop playsinline preload="auto" poster="./previews/vertigo-poster.webp" width="1080"
+              height="1350" aria-hidden="true">
+              <source src="./previews/vertigo.mp4" type="video/mp4" />
+            </video>
+            <figcaption class="overlay">
+              <h2>Póster — Vértigo</h2>
+              <p>Un póster editorial tomando como referencia la película Vértigo de Alfred Hitchcock.</p>
+            </figcaption>
+          </figure>
+          <p class="caption">02</p>
+        </a>
+      </li>
+      <li>
+        <a class="piece" href="./03/">
+          <figure class="media">
+            <video autoplay muted loop playsinline preload="auto" poster="./previews/cubi-poster.webp" width="1080"
+              height="1350" aria-hidden="true">
+              <source src="./previews/cubi.mp4" type="video/mp4" />
+            </video>
+            <figcaption class="overlay">
+              <h2>Personaje — Cubi</h2>
+              <p>Un cubo de vidrio con cara y grilla fluida; te mira y despierta al acercarte.</p>
+            </figcaption>
+          </figure>
+          <p class="caption">03</p>
+        </a>
+      </li>
+    </ol>
+  </main>
 
   <script type="module" src="/src/index.js"></script>
 </body>

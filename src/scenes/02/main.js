@@ -19,8 +19,8 @@ import {
 } from "three/tsl";
 
 const palette = {
-  red: "#ff1a14",
-  shade: "#07050c",
+  lit: "#fff",
+  shade: "#004bff",
 };
 
 function map(value, inMin, inMax, outMin, outMax) {
@@ -136,7 +136,7 @@ class Scene {
       title: "Póster — Vértigo",
       description:
         "Un póster editorial tomando como referencia la película Vértigo de Alfred Hitchcock.",
-      active: "negro",
+      active: "azul",
       moods: [
         {
           id: "negro",
@@ -168,6 +168,7 @@ class Scene {
       ],
       onMood: (mood) => this.applyMood(mood),
     });
+    this.applyMood(this.infoPanel.moods.find((mood) => mood.id === "azul"));
   }
 
   applyMood(mood) {
@@ -279,7 +280,7 @@ class Scene {
 
   setupVortex() {
     this.vortex = {
-      lit: uniform(color(palette.red)),
+      lit: uniform(color(palette.lit)),
       shade: uniform(color(palette.shade)),
       speed: uniform(1.6),
       density: uniform(11.9),

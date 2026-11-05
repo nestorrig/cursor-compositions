@@ -146,7 +146,7 @@ class Scene {
     });
 
     this.scene.environment = this.envStudio.texture;
-    this.scene.environmentIntensity = 0;
+    this.scene.environmentIntensity = 1.75;
   }
 
   setupInfoPanel() {
@@ -154,7 +154,7 @@ class Scene {
       title: "Personaje — Cubi",
       description:
         "Un cubo de vidrio con cara y grilla fluida; te mira y despierta al acercarte.",
-      active: "negro",
+      active: "azul",
       moods: [
         {
           id: "negro",
@@ -183,6 +183,7 @@ class Scene {
       ],
       onMood: (mood) => this.applyMood(mood),
     });
+    this.applyMood(this.infoPanel.moods.find((mood) => mood.id === "azul"));
   }
 
   applyMood(mood) {
@@ -223,7 +224,7 @@ class Scene {
       dyeClamp: uniform(1.15),
       stroke: uniform(0.03),
       resolution: uniform(new THREE.Vector2(1, 1)),
-      paper: uniform(color("#000")),
+      paper: uniform(color("#004bff")),
       ink: uniform(color("#ffffff")),
     };
 

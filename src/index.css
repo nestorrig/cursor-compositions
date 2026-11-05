@@ -194,6 +194,7 @@ footer {
 footer a {
   color: inherit;
   text-underline-offset: 0.18em;
+  font-size: 0.9rem;
 }
 
 footer a:hover,

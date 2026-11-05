@@ -1,0 +1,25 @@
+{
+  "name": "Diseño de Interacciones: Cursor",
+  "short_name": "Cursor",
+  "description": "Tres composiciones interactivas hechas con Three.js y WebGPU, pensadas para explorarse con el cursor.",
+  "lang": "es",
+  "start_url": "../",
+  "scope": "../",
+  "icons": [
+    {
+      "src": "./web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#004bff",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}

@@ -1,5 +1,7 @@
 # Diseño de Interacciones: Cursor
 
+![Portada de Diseño de Interacciones: Cursor, con Cúspide, Vértigo y Cubi](./public/COVER.png)
+
 Proyecto estudiantil del curso **Interacción y Render Web Avanzado**, impartido por [Andrew Alvarado](https://andrew.studio/) en el tercer semestre de la licenciatura en Computación Creativa en [CENTRO](https://centro.edu.mx/).
 
 Tres composiciones interactivas hechas con Three.js y WebGPU, pensadas para explorarse con el cursor.

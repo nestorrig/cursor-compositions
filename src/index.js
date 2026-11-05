@@ -44,6 +44,12 @@ motion.add("(prefers-reduced-motion: no-preference)", () => {
     delay: 0.08,
     onComplete: playPreviews,
   });
+  gsap.from("footer", {
+    y: 16,
+    autoAlpha: 0,
+    duration: 0.6,
+    delay: 0.45,
+  });
 });
 
 motion.add(

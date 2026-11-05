@@ -34,6 +34,7 @@ import { Pointer } from "../../lib/pointer.js";
 import { InkFluid } from "../../lib/inkFluid.js";
 import { createLightformerEnvironment } from "../../lib/lightformers.js";
 import { setupDebug } from "./debug.js";
+import { InfoPanel } from "../../lib/InfoPanel.js";
 
 class Scene {
   constructor() {
@@ -81,6 +82,7 @@ class Scene {
       this.setupEnvironment();
       this.setupPostProcessing();
       setupDebug(this);
+      this.setupInfoPanel();
       this.resize();
       this.renderer.setAnimationLoop(() => this.tick());
     });
@@ -136,7 +138,7 @@ class Scene {
 
   setupEnvironment() {
     this.envColors = {
-      background: "#004bff",
+      background: "#fff",
     };
 
     this.envStudio = createLightformerEnvironment(this.renderer, {
@@ -145,6 +147,48 @@ class Scene {
 
     this.scene.environment = this.envStudio.texture;
     this.scene.environmentIntensity = 0;
+  }
+
+  setupInfoPanel() {
+    this.infoPanel = new InfoPanel({
+      title: "Personaje — Cubi",
+      description:
+        "Un cubo de vidrio con cara y grilla fluida; te mira y despierta al acercarte.",
+      active: "negro",
+      moods: [
+        {
+          id: "negro",
+          label: "Negro",
+          swatch: "#000000",
+          envIntensity: 0,
+          paper: "#111111",
+          ink: "#fff",
+        },
+        {
+          id: "azul",
+          label: "Azul",
+          swatch: "#004bff",
+          envIntensity: 1.75,
+          paper: "#004bff",
+          ink: "#ffffff",
+        },
+        {
+          id: "blanco",
+          label: "Blanco",
+          swatch: "#ffffff",
+          envIntensity: 2,
+          paper: "#ffffff",
+          ink: "#004bff",
+        },
+      ],
+      onMood: (mood) => this.applyMood(mood),
+    });
+  }
+
+  applyMood(mood) {
+    this.scene.environmentIntensity = mood.envIntensity;
+    this.grid.paper.value.set(mood.paper);
+    this.grid.ink.value.set(mood.ink);
   }
 
   rebuildEnvironment() {

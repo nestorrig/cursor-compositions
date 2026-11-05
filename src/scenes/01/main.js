@@ -25,6 +25,7 @@ import { Pointer } from "../../lib/pointer.js";
 import { createBasicNodeMaterial } from "../../lib/posterMaterial.js";
 import { InkFluid } from "../../lib/inkFluid.js";
 import { setupDebug } from "./debug.js";
+import { InfoPanel } from "../../lib/InfoPanel.js";
 
 const randomRange = (min, max) => Math.random() * (max - min) + min;
 
@@ -49,6 +50,7 @@ class Scene01 {
     this.setupPrismalPiramid();
     this.setupPostProcessing();
     setupDebug(this);
+    this.setupInfoPanel();
 
     this.resize();
     this.renderer.setAnimationLoop(() => this.tick());
@@ -490,6 +492,44 @@ class Scene01 {
       delta,
     );
     this.camera.lookAt(this.lookHome);
+  }
+
+  setupInfoPanel() {
+    this.infoPanel = new InfoPanel({
+      title: "Hero 3D — Cúspide",
+      description:
+        "Diseño de un hero para algún estudio de arquitectura y arte, con elementos geométricos y técnicas de posprocesado para crear un efecto de impresión en risografía.",
+      active: "papel",
+      moods: [
+        {
+          id: "papel",
+          label: "Papel",
+          swatch: "#ffffff",
+          inner: "#004bff",
+          outer: "#ffffff",
+        },
+        {
+          id: "azul",
+          label: "Azul",
+          swatch: "#004bff",
+          inner: "#ffffff",
+          outer: "#004bff",
+        },
+        {
+          id: "negro",
+          label: "Negro",
+          swatch: "#000000",
+          inner: "#ffffff",
+          outer: "#000000",
+        },
+      ],
+      onMood: (mood) => this.applyMood(mood),
+    });
+  }
+
+  applyMood(mood) {
+    this.sobel.inner.value.set(mood.inner);
+    this.sobel.outer.value.set(mood.outer);
   }
 
   tick() {

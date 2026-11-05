@@ -3,6 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Pointer } from "../../lib/pointer.js";
 import { VariableTitle } from "./VariableTitle.js";
 import { setupDebug } from "./debug.js";
+import { InfoPanel } from "../../lib/InfoPanel.js";
 import {
   atan,
   color,
@@ -125,8 +126,59 @@ class Scene {
     );
 
     setupDebug(this);
+    this.setupInfoPanel();
     this.resize();
     this.renderer.setAnimationLoop(() => this.tick());
+  }
+
+  setupInfoPanel() {
+    this.infoPanel = new InfoPanel({
+      title: "Póster — Vértigo",
+      description:
+        "Un póster editorial tomando como referencia la película Vértigo de Alfred Hitchcock.",
+      active: "negro",
+      moods: [
+        {
+          id: "negro",
+          label: "Negro",
+          swatch: "#07050c",
+          lit: "#ff1a14",
+          shade: "#07050c",
+          type: "#f4f0ea",
+          border: "#ff1a14",
+        },
+        {
+          id: "azul",
+          label: "Azul",
+          swatch: "#004bff",
+          lit: "#fff",
+          shade: "#004bff",
+          type: "#ffffff",
+          border: "#fff",
+        },
+        {
+          id: "rojo",
+          label: "Rojo",
+          swatch: "#ff1a14",
+          lit: "#ffffff",
+          shade: "#ff1a14",
+          type: "#ffffff",
+          border: "#ffffff",
+        },
+      ],
+      onMood: (mood) => this.applyMood(mood),
+    });
+  }
+
+  applyMood(mood) {
+    this.vortex.lit.value.set(mood.lit);
+    this.vortex.shade.value.set(mood.shade);
+    document.body.style.background = mood.shade;
+    this.canvas.style.borderColor = mood.border;
+    const title = document.querySelector("#title");
+    const credits = document.querySelector(".credits");
+    if (title) title.style.color = mood.type;
+    if (credits) credits.style.color = mood.type;
   }
 
   setupViewport() {

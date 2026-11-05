@@ -175,7 +175,7 @@ h1 {
 footer {
   display: grid;
   gap: 0.75rem;
-  margin-top: clamp(2rem, 5vw, 4rem);
+  margin-top: 2.5rem;
 }
 
 .credit {
